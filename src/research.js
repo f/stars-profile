@@ -243,7 +243,7 @@ function createScrollBox(label) {
   return { push, finish };
 }
 
-function spawnCopilotStreaming(prompt, label, timeout = 180_000) {
+function spawnCopilotStreaming(prompt, label) {
   return new Promise((resolve, reject) => {
     let stdout = '';
     let stderr = '';
@@ -251,7 +251,6 @@ function spawnCopilotStreaming(prompt, label, timeout = 180_000) {
 
     const proc = spawn('copilot', ['-p', prompt, '--allow-all-tools'], {
       stdio: ['ignore', 'pipe', 'pipe'],
-      timeout,
     });
 
     proc.stdout.on('data', chunk => {
