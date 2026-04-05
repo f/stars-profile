@@ -1,15 +1,31 @@
 # stars-profile
 
-Manage your [GitHub Stars](https://stars.github.com/) profile contributions using GitHub Copilot CLI for deep research.
+<p align="center">
+  <img src="https://stars.github.com/card.jpg" alt="GitHub Stars" width="600">
+</p>
+
+<p align="center">
+  Manage your <a href="https://stars.github.com/">GitHub Stars</a> profile contributions using GitHub Copilot CLI for deep research.
+</p>
+
+<p align="center">
+  <em>Built entirely in VS Code with GitHub Copilot. Uses Copilot CLI programmatic mode for autonomous web research.</em>
+</p>
 
 ## How it works
 
 1. Fetches your existing contributions from the Stars API
 2. Analyzes the language, tone, and style of your entries
-3. Uses GitHub Copilot CLI to deep-research your recent activities (last 6 months)
+3. Uses GitHub Copilot CLI (programmatic mode) to deep-research your recent activities (last 6 months)
 4. Searches across X, LinkedIn, YouTube, GitHub, Google, blogs, and more
 5. Presents results for review and selection
 6. Batch-creates selected contributions via the Stars API
+
+## Built with
+
+- **VS Code** + **GitHub Copilot** — the entire codebase was built using Copilot in VS Code
+- **Copilot CLI** (`copilot -p`) — programmatic mode for autonomous deep web research with tool use
+- **GitHub Stars GraphQL API** — for reading and writing contributions
 
 ## Prerequisites
 
