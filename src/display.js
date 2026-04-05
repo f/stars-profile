@@ -13,9 +13,25 @@ const TYPE_COLORS = {
   OTHER: 'white',
 };
 
+const TYPE_LABELS = {
+  SPEAKING: 'Speaking',
+  BLOGPOST: 'Blog Post',
+  ARTICLE_PUBLICATION: 'Article',
+  EVENT_ORGANIZATION: 'Event Organization',
+  HACKATHON: 'Hackathon',
+  OPEN_SOURCE_PROJECT: 'Open Source Project',
+  VIDEO_PODCAST: 'Video / Podcast',
+  FORUM: 'Forum',
+  OTHER: 'Other',
+};
+
+function typeLabel(type) {
+  return TYPE_LABELS[type] || type;
+}
+
 function colorType(type) {
   const color = TYPE_COLORS[type] || 'white';
-  return chalk[color](type.padEnd(22));
+  return chalk[color](typeLabel(type).padEnd(22));
 }
 
 function truncate(str, len) {
