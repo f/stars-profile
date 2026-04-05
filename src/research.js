@@ -31,7 +31,7 @@ function detectLanguage(contributions) {
     .toLowerCase();
 
   const langSignals = {
-    Turkish: ['hakkında', 'konuştum', 'etkinlik', 'üniversitesi', 'çağında', 'hala', 'gerekli', 'topluluk', 'ile', 'için', 'olarak', 'bir'],
+    Turkish: ['hakkında', 'konuştum', 'etkinlik', 'üniversitesi', 'topluluk'],
     Portuguese: ['sobre', 'como', 'para', 'uma', 'comunidade', 'desenvolvimento'],
     Spanish: ['sobre', 'cómo', 'para', 'una', 'comunidad', 'desarrollo', 'habló'],
     Japanese: ['について', 'です', 'した', 'ます'],
@@ -55,22 +55,27 @@ function detectLanguage(contributions) {
 function buildResearchPrompt(query) {
   return `Do deep research on "${query}" and find their public activities from the LAST 6 MONTHS ONLY (October 2025 – April 2026). Do NOT include older activities.
 
-Specifically search these platforms:
+Specifically search these platforms using web search:
 - X (Twitter): Search x.com/search for recent posts and mentions about this person's talks, projects, and activities
+- Bluesky: Search bsky.app for recent posts — especially announcements about speaking engagements, conferences, and meetups
 - LinkedIn: Search linkedin.com for their recent posts, articles, and event announcements
 - YouTube: Search for their recent talks, interviews, and podcast appearances
 - GitHub: Search for their recently active repositories and open source contributions
+  IMPORTANT for GitHub repos: For each repository found, visit the GitHub repo page and check the ACTUAL repository creation date (the "created" date shown on the repo). Use that date, NOT today's date. Do NOT assume a repo is new just because it has recent commits.
 - Google: General web search for recent conference appearances, blog posts, and news mentions
 - Dev.to, Medium, personal blogs: Search for articles they've recently written
+- Conference/event websites: Search for speaker listings, schedules, and talk recordings
 
 IMPORTANT: Only include activities from the last 6 months. Skip anything older.
+IMPORTANT: For open source projects, the date must be the actual GitHub repository creation date. Visit the repo page to verify.
+IMPORTANT: For speaking engagements, search thoroughly — check Bluesky, X, LinkedIn, conference websites, and YouTube for any talks, workshops, or appearances.
 
 For each activity found, note:
 - What it is (talk, blog post, open source project, video, podcast, event, hackathon, etc.)
 - The title
 - The full URL/link (must be a complete URL starting with https://)
 - A brief description
-- The approximate date
+- The approximate date (for repos: the actual creation date from GitHub)
 
 List everything you find. Be thorough — check multiple pages and sources, but only recent items.`;
 }
