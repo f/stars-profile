@@ -1,0 +1,265 @@
+import { spawn } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { CONTRIBUTION_TYPES } from './api.js';
+
+function sampleExamples(contributions) {
+  const byType = {};
+  for (const c of contributions) {
+    const t = c.type || 'OTHER';
+    if (!byType[t]) byType[t] = [];
+    byType[t].push(c);
+  }
+
+  const samples = [];
+  for (const [type, items] of Object.entries(byType)) {
+    samples.push(...items.slice(0, 2));
+  }
+  return samples.slice(0, 15);
+}
+
+function detectLanguage(contributions) {
+  if (contributions.length === 0) return null;
+
+  const text = contributions
+    .map(c => `${c.title} ${c.description}`)
+    .join(' ')
+    .toLowerCase();
+
+  const langSignals = {
+    Turkish: ['hakkında', 'konuştum', 'etkinlik', 'üniversitesi', 'çağında', 'hala', 'gerekli', 'topluluk', 'ile', 'için', 'olarak', 'bir'],
+    Portuguese: ['sobre', 'como', 'para', 'uma', 'comunidade', 'desenvolvimento'],
+    Spanish: ['sobre', 'cómo', 'para', 'una', 'comunidad', 'desarrollo', 'habló'],
+    Japanese: ['について', 'です', 'した', 'ます'],
+    Korean: ['에서', '대해', '입니다', '했습니다'],
+  };
+
+  const scores = {};
+  for (const [lang, words] of Object.entries(langSignals)) {
+    scores[lang] = words.filter(w => text.includes(w)).length;
+  }
+
+  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  if (best && best[1] >= 3) {
+    return `primarily English with some ${best[0]} titles/phrases`;
+  }
+
+  return 'English';
+}
+
+// Phase 1: Research prompt — gather data freely, no JSON constraint
+function buildResearchPrompt(query) {
+  return `Do deep research on "${query}" and find their public activities from the LAST 6 MONTHS ONLY (October 2025 – April 2026). Do NOT include older activities.
+
+Specifically search these platforms:
+- X (Twitter): Search x.com/search for recent posts and mentions about this person's talks, projects, and activities
+- LinkedIn: Search linkedin.com for their recent posts, articles, and event announcements
+- YouTube: Search for their recent talks, interviews, and podcast appearances
+- GitHub: Search for their recently active repositories and open source contributions
+- Google: General web search for recent conference appearances, blog posts, and news mentions
+- Dev.to, Medium, personal blogs: Search for articles they've recently written
+
+IMPORTANT: Only include activities from the last 6 months. Skip anything older.
+
+For each activity found, note:
+- What it is (talk, blog post, open source project, video, podcast, event, hackathon, etc.)
+- The title
+- The full URL/link (must be a complete URL starting with https://)
+- A brief description
+- The approximate date
+
+List everything you find. Be thorough — check multiple pages and sources, but only recent items.`;
+}
+
+// Phase 2: Convert prompt — take raw research and convert to structured JSON
+function buildConvertPrompt(researchDataPath, outputPath, existingContributions) {
+  const samples = sampleExamples(existingContributions);
+  const existingUrls = existingContributions
+    .map(c => c.url)
+    .filter(Boolean);
+
+  const language = detectLanguage(existingContributions);
+
+  let styleSection;
+  if (samples.length > 0) {
+    const examplesJson = JSON.stringify(
+      samples.map(({ title, url, description, type, date }) => ({ title, url, description, type, date })),
+      null,
+      2
+    );
+
+    styleSection = `Here are examples of how this person's existing contributions are formatted — match the SAME language, tone, and description style exactly:
+
+${examplesJson}
+
+The detected writing style is ${language}. Write all new entries in the same language and voice as these examples.`;
+  } else {
+    styleSection = `This person has no existing contributions yet. Use a professional, first-person style for descriptions (e.g. "I spoke about X at Y", "A workshop about X for Y").`;
+  }
+
+  const excludeSection = existingUrls.length > 0
+    ? `\nExclude any of these URLs (already recorded):\n${existingUrls.join('\n')}\n`
+    : '';
+
+  return `Read the research data from the file at ${researchDataPath}.
+
+Convert ALL the activities found into a valid JSON array and write it to ${outputPath}.
+
+${styleSection}
+${excludeSection}
+Each object in the JSON array must have exactly these fields:
+- "title": string
+- "url": string or null
+- "description": string (matching the style above)
+- "type": one of: ${CONTRIBUTION_TYPES.join(', ')}
+- "date": ISO 8601 string (e.g. "2025-03-22T00:00:00.000Z")
+
+Write ONLY valid JSON to the output file. No explanations, no markdown — just the raw JSON array.
+Make sure the file is written successfully.`;
+}
+
+function isValidUrl(str) {
+  if (!str || typeof str !== 'string') return false;
+  try {
+    const u = new URL(str);
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function validateContribution(item) {
+  if (!item || typeof item !== 'object') return null;
+  if (!item.title || !item.description || !item.date) return null;
+  if (item.type && !CONTRIBUTION_TYPES.includes(item.type)) {
+    item.type = 'OTHER';
+  }
+
+  let url = item.url ? String(item.url).trim() : null;
+  // Fix URLs missing protocol
+  if (url && !url.startsWith('http')) {
+    url = 'https://' + url;
+  }
+  // Drop invalid URLs entirely — the API crashes on bad URLs
+  if (url && !isValidUrl(url)) {
+    url = null;
+  }
+
+  return {
+    title: String(item.title),
+    url,
+    description: String(item.description),
+    type: item.type || 'OTHER',
+    date: String(item.date),
+  };
+}
+
+function spawnCopilotStreaming(prompt, timeout = 180_000) {
+  return new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+
+    const proc = spawn('copilot', ['-p', prompt, '--allow-all-tools'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout,
+    });
+
+    proc.stdout.on('data', chunk => {
+      const text = chunk.toString();
+      stdout += text;
+      process.stderr.write(text); // stream to terminal in real-time
+    });
+
+    proc.stderr.on('data', chunk => {
+      stderr += chunk.toString();
+    });
+
+    proc.on('error', (err) => {
+      if (err.code === 'ENOENT') {
+        reject(new Error(
+          'GitHub Copilot CLI not found. Install it:\n  npm install -g @github/copilot\nThen authenticate:\n  copilot /login'
+        ));
+      } else {
+        reject(err);
+      }
+    });
+
+    proc.on('close', (code) => {
+      if (code !== 0 && !stdout.trim()) {
+        reject(new Error(`Copilot CLI exited with code ${code}: ${stderr.trim()}`));
+      } else {
+        resolve(stdout);
+      }
+    });
+  });
+}
+
+export async function researchActivities(query, existingContributions) {
+  const timestamp = Date.now();
+  const researchDataPath = join(tmpdir(), `stars-profile-research-${timestamp}.txt`);
+  const outputPath = join(tmpdir(), `stars-profile-results-${timestamp}.json`);
+
+  // Phase 1: Deep research — streams output to terminal
+  console.log('\n--- Phase 1: Deep Research ---\n');
+  const researchOutput = await spawnCopilotStreaming(
+    buildResearchPrompt(query)
+  );
+  console.log('\n');
+
+  // Save research data to temp file for phase 2
+  writeFileSync(researchDataPath, researchOutput);
+  console.log(`Research data saved to: ${researchDataPath}`);
+
+  // Phase 2: Convert to structured JSON
+  console.log('\n--- Phase 2: Converting to structured data ---\n');
+  await spawnCopilotStreaming(
+    buildConvertPrompt(researchDataPath, outputPath, existingContributions)
+  );
+  console.log('\n');
+
+  // Read the JSON output file
+  let jsonContent;
+  try {
+    jsonContent = readFileSync(outputPath, 'utf-8');
+  } catch {
+    throw new Error(
+      `Copilot did not write the JSON output file at ${outputPath}.\nResearch data saved at: ${researchDataPath}`
+    );
+  }
+
+  // Parse JSON
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonContent.trim());
+  } catch {
+    const match = jsonContent.match(/\[[\s\S]*\]/);
+    if (match) {
+      try {
+        parsed = JSON.parse(match[0]);
+      } catch {
+        throw new Error(
+          `Could not parse JSON from output file.\nFile: ${outputPath}\nResearch data: ${researchDataPath}`
+        );
+      }
+    } else {
+      throw new Error(
+        `Invalid JSON in output file.\nFile: ${outputPath}\nResearch data: ${researchDataPath}`
+      );
+    }
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error('Output JSON is not an array.');
+  }
+
+  // Validate and dedup
+  const existingUrls = new Set(
+    existingContributions.map(c => c.url).filter(Boolean)
+  );
+
+  return parsed
+    .map(validateContribution)
+    .filter(Boolean)
+    .filter(item => !item.url || !existingUrls.has(item.url));
+}

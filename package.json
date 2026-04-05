@@ -1,0 +1,34 @@
+{
+  "name": "stars-profile",
+  "version": "1.0.0",
+  "description": "Manage GitHub Stars profile contributions using Copilot CLI deep research",
+  "type": "module",
+  "license": "MIT",
+  "author": "Fatih Kadir Akın",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicedoc/stars-profile"
+  },
+  "keywords": [
+    "github",
+    "stars",
+    "contributions",
+    "copilot",
+    "cli"
+  ],
+  "bin": {
+    "stars-profile": "./bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.0"
+  }
+}
