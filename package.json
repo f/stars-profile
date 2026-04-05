@@ -1,6 +1,6 @@
 {
   "name": "stars-profile",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Manage GitHub Stars profile contributions using Copilot CLI deep research",
   "type": "module",
   "license": "MIT",
@@ -28,7 +28,9 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^7.0.0",
+    "boxen": "^8.0.1",
     "chalk": "^5.3.0",
+    "log-update": "^8.0.0",
     "ora": "^8.0.0"
   }
 }

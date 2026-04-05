@@ -108,9 +108,7 @@ export async function run() {
   query = query.trim();
   saveQuery(query);
 
-  // Step 3: Research with Copilot CLI (streams output to terminal)
-  console.log(chalk.hex('#FFD700')('\n  ★ Phase 1: Deep Research'));
-  console.log(chalk.dim('  Copilot CLI is searching the web...\n'));
+  // Step 3: Research with Copilot CLI (streams in scroll box)
   let newActivities;
   try {
     newActivities = await researchActivities(query, existing);

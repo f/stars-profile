@@ -3,6 +3,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import chalk from 'chalk';
+import boxen from 'boxen';
+import logUpdate from 'log-update';
 import { CONTRIBUTION_TYPES } from './api.js';
 
 function sampleExamples(contributions) {
@@ -156,10 +158,91 @@ function validateContribution(item) {
   };
 }
 
-function spawnCopilotStreaming(prompt, timeout = 180_000) {
+const BOX_HEIGHT = 8;
+const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
+function createScrollBox(label) {
+  const lines = [];
+  let frame = 0;
+  let timer = null;
+
+  function render() {
+    const spinner = chalk.hex('#e3b341')(SPINNER_FRAMES[frame % SPINNER_FRAMES.length]);
+    const title = `${spinner} ${label}`;
+    const boxWidth = Math.max(40, (process.stdout.columns || 80) - 4);
+
+    const visible = lines.slice(-BOX_HEIGHT);
+    while (visible.length < BOX_HEIGHT) visible.push('');
+
+    const content = visible
+      .map(l => chalk.dim(l))
+      .join('\n');
+
+    const box = boxen(content, {
+      title,
+      titleAlignment: 'left',
+      width: boxWidth,
+      padding: { left: 1, right: 1 },
+      margin: { left: 1 },
+      borderStyle: 'round',
+      borderColor: 'gray',
+      dimBorder: true,
+    });
+
+    logUpdate(box);
+  }
+
+  function startSpinner() {
+    timer = setInterval(() => {
+      frame++;
+      render();
+    }, 80);
+  }
+
+  function push(text) {
+    const parts = text.split('\n');
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i].trimEnd();
+      if (i === 0 && lines.length > 0) {
+        lines[lines.length - 1] += part;
+      } else {
+        lines.push(part);
+      }
+    }
+  }
+
+  function finish() {
+    if (timer) clearInterval(timer);
+    frame = 0;
+    const title = `${chalk.green('✔')} ${label}`;
+    const boxWidth = Math.max(40, (process.stdout.columns || 80) - 4);
+    const visible = lines.slice(-BOX_HEIGHT);
+    while (visible.length < BOX_HEIGHT) visible.push('');
+    const content = visible.map(l => chalk.dim(l)).join('\n');
+    const box = boxen(content, {
+      title,
+      titleAlignment: 'left',
+      width: boxWidth,
+      padding: { left: 1, right: 1 },
+      margin: { left: 1 },
+      borderStyle: 'round',
+      borderColor: 'gray',
+      dimBorder: true,
+    });
+    logUpdate(box);
+    logUpdate.done();
+  }
+
+  render();
+  startSpinner();
+  return { push, finish };
+}
+
+function spawnCopilotStreaming(prompt, label, timeout = 180_000) {
   return new Promise((resolve, reject) => {
     let stdout = '';
     let stderr = '';
+    const box = createScrollBox(label);
 
     const proc = spawn('copilot', ['-p', prompt, '--allow-all-tools'], {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -169,7 +252,7 @@ function spawnCopilotStreaming(prompt, timeout = 180_000) {
     proc.stdout.on('data', chunk => {
       const text = chunk.toString();
       stdout += text;
-      process.stderr.write(text); // stream to terminal in real-time
+      box.push(text);
     });
 
     proc.stderr.on('data', chunk => {
@@ -177,6 +260,7 @@ function spawnCopilotStreaming(prompt, timeout = 180_000) {
     });
 
     proc.on('error', (err) => {
+      box.finish();
       if (err.code === 'ENOENT') {
         reject(new Error(
           'GitHub Copilot CLI not found. Install it:\n  npm install -g @github/copilot\nThen authenticate:\n  copilot /login'
@@ -187,6 +271,7 @@ function spawnCopilotStreaming(prompt, timeout = 180_000) {
     });
 
     proc.on('close', (code) => {
+      box.finish();
       if (code !== 0 && !stdout.trim()) {
         reject(new Error(`Copilot CLI exited with code ${code}: ${stderr.trim()}`));
       } else {
@@ -201,21 +286,20 @@ export async function researchActivities(query, existingContributions) {
   const researchDataPath = join(tmpdir(), `stars-profile-research-${timestamp}.txt`);
   const outputPath = join(tmpdir(), `stars-profile-results-${timestamp}.json`);
 
-  // Phase 1: Deep research — streams output to terminal
+  // Phase 1: Deep research — streams in scroll box
   const researchOutput = await spawnCopilotStreaming(
-    buildResearchPrompt(query)
+    buildResearchPrompt(query),
+    '★ Copilot Deep Research'
   );
-  console.log('\n');
 
   // Save research data to temp file for phase 2
   writeFileSync(researchDataPath, researchOutput);
 
   // Phase 2: Convert to structured JSON
-  console.log(chalk.hex('#FFD700')('  ★ Phase 2: Converting to structured data\n'));
   await spawnCopilotStreaming(
-    buildConvertPrompt(researchDataPath, outputPath, existingContributions)
+    buildConvertPrompt(researchDataPath, outputPath, existingContributions),
+    '★ Converting to structured data'
   );
-  console.log('\n');
 
   // Read the JSON output file
   let jsonContent;

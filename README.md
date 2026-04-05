@@ -1,14 +1,31 @@
-# stars-profile
+<h1 align="center">
+  <br>
+  <img src="logo.svg" alt="GitHub Stars" width="300">
+  <br>
+  `npx stars-profile`
+  <br>
+</h1>
 
 <p align="center">
-  <img src="logo.svg" alt="GitHub Stars" width="300">
-  <br><br>
   <strong>AI-powered CLI to manage your <a href="https://stars.github.com/">GitHub Stars</a> profile contributions.</strong>
-  <br>
-  Uses GitHub Copilot CLI in programmatic mode to deep-research your recent activities across the web, then batch-creates contributions via the Stars API.
-  <br><br>
-  <code>You must be a GitHub Star to use this tool.</code>
-  <br><br>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/stars-profile"><img src="https://img.shields.io/npm/v/stars-profile.svg?style=flat-square&color=FFD700" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/stars-profile"><img src="https://img.shields.io/npm/dm/stars-profile.svg?style=flat-square" alt="npm downloads"></a>
+  <a href="https://github.com/f/stars-profile/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="license"></a>
+  <a href="https://stars.github.com"><img src="https://img.shields.io/badge/GitHub-Stars-FFD700?style=flat-square&logo=github" alt="GitHub Stars"></a>
+</p>
+
+<p align="center">
+  Uses GitHub Copilot CLI in programmatic mode to deep-research your recent activities<br>across X, LinkedIn, YouTube, GitHub, Google, and more — then batch-creates contributions via the Stars API.
+</p>
+
+<p align="center">
+  <code>⚠ You must be a GitHub Star to use this tool.</code>
+</p>
+
+<p align="center">
   <em>Built entirely in VS Code with GitHub Copilot.</em>
 </p>
 
@@ -82,12 +99,20 @@ $ npx stars-profile -q "fatih kadir akın"
     OPEN_SOURCE_PROJECT    ████████████████████████████ 28
     VIDEO_PODCAST          ██████████ 10
 
-  ★ Phase 1: Deep Research
-  Copilot CLI is searching the web...
+  ╭─ ★ Copilot Deep Research ──────────────────────────────╮
+  │ Searching x.com for recent posts and mentions...        │
+  │ Found 2 posts about conference talks                    │
+  │ Searching youtube.com for talks and interviews...       │
+  │ Found 1 new conference recording                        │
+  │ Searching github.com for recently active repositories...│
+  │ Found 3 repositories with recent activity               │
+  ╰─────────────────────────────────────────────────────────╯
 
-  Searching x.com for recent posts and mentions...
-  Searching youtube.com for talks and interviews...
-  Searching github.com for recently active repositories...
+  ╭─ ★ Converting to structured data ──────────────────────╮
+  │ Reading research data...                                │
+  │ Matching style of existing contributions...             │
+  │ Writing 3 activities to JSON...                         │
+  ╰─────────────────────────────────────────────────────────╯
 
   ★ Found 3 new activities
 
