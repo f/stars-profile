@@ -2,7 +2,7 @@
   <br>
   <img src="logo.svg" alt="GitHub Stars" width="300">
   <br>
-  `npx stars-profile`
+  <code>npx stars-profile</code>
   <br>
 </h1>
 
