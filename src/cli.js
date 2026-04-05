@@ -28,30 +28,31 @@ function parseArgs(argv) {
   return opts;
 }
 
-function showHelp() {
-  console.log(`
-${chalk.bold('stars-profile')} — Manage GitHub Stars contributions with Copilot CLI deep research
+const HEADER = `
+${chalk.hex('#FFD700')('  ★')} ${chalk.bold.hex('#FFD700')('stars-profile')}  ${chalk.dim('— AI-powered GitHub Stars contribution manager')}
+${chalk.dim('  You must be a GitHub Star to use this tool.')}
+${chalk.dim('  https://stars.github.com')}
+`;
 
-${chalk.bold('USAGE')}
-  npx stars-profile [options] [query]
+function showHeader() {
+  console.log(HEADER);
+}
+
+function showHelp() {
+  showHeader();
+  console.log(`${chalk.bold('USAGE')}
+  ${chalk.hex('#FFD700')('$')} npx stars-profile ${chalk.dim('[options] [query]')}
 
 ${chalk.bold('OPTIONS')}
-  -q, --query <text>   Search query (e.g. "fatih kadir akın speeches")
-  -t, --token <token>  Stars API token (default: $GITHUB_STARS_TOKEN)
-      --dry-run        Print the curl command instead of submitting
-  -h, --help           Show this help message
+  ${chalk.cyan('-q, --query')} <text>   Search query (e.g. "fatih kadir akın speeches")
+  ${chalk.cyan('-t, --token')} <token>  Stars API token (default: $GITHUB_STARS_TOKEN)
+  ${chalk.cyan('    --dry-run')}        Print the curl command instead of submitting
+  ${chalk.cyan('-h, --help')}           Show this help message
 
 ${chalk.bold('EXAMPLES')}
-  npx stars-profile -q "john doe conference talks"
-  npx stars-profile --dry-run -q "jane smith open source"
-  GITHUB_STARS_TOKEN=abc npx stars-profile
-
-${chalk.bold('HOW IT WORKS')}
-  1. Fetches your existing contributions from the Stars API
-  2. Analyzes the language, tone, and style of your entries
-  3. Uses GitHub Copilot CLI to deep-research new activities
-  4. Presents results for review and selection
-  5. Batch-creates selected contributions via the Stars API
+  ${chalk.dim('$')} npx stars-profile -q "john doe conference talks"
+  ${chalk.dim('$')} npx stars-profile --dry-run -q "jane smith open source"
+  ${chalk.dim('$')} GITHUB_STARS_TOKEN=abc npx stars-profile
 `);
 }
 
@@ -62,6 +63,8 @@ export async function run() {
     showHelp();
     process.exit(0);
   }
+
+  showHeader();
 
   let token = opts.token || process.env.GITHUB_STARS_TOKEN || getSavedToken();
   if (!token) {
@@ -106,13 +109,15 @@ export async function run() {
   saveQuery(query);
 
   // Step 3: Research with Copilot CLI (streams output to terminal)
+  console.log(chalk.hex('#FFD700')('\n  ★ Phase 1: Deep Research'));
+  console.log(chalk.dim('  Copilot CLI is searching the web...\n'));
   let newActivities;
   try {
     newActivities = await researchActivities(query, existing);
-    console.log(chalk.green(`\n✔ Found ${newActivities.length} new activities\n`));
+    console.log(chalk.hex('#FFD700')(`\n  ★ Found ${newActivities.length} new activities\n`));
   } catch (err) {
-    console.error(chalk.red('\n✖ Research failed'));
-    console.error(chalk.red(err.message));
+    console.error(chalk.red('\n  ✖ Research failed'));
+    console.error(chalk.red(`  ${err.message}`));
     process.exit(1);
   }
 

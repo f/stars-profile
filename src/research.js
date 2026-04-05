@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import chalk from 'chalk';
 import { CONTRIBUTION_TYPES } from './api.js';
 
 function sampleExamples(contributions) {
@@ -201,7 +202,6 @@ export async function researchActivities(query, existingContributions) {
   const outputPath = join(tmpdir(), `stars-profile-results-${timestamp}.json`);
 
   // Phase 1: Deep research — streams output to terminal
-  console.log('\n--- Phase 1: Deep Research ---\n');
   const researchOutput = await spawnCopilotStreaming(
     buildResearchPrompt(query)
   );
@@ -209,10 +209,9 @@ export async function researchActivities(query, existingContributions) {
 
   // Save research data to temp file for phase 2
   writeFileSync(researchDataPath, researchOutput);
-  console.log(`Research data saved to: ${researchDataPath}`);
 
   // Phase 2: Convert to structured JSON
-  console.log('\n--- Phase 2: Converting to structured data ---\n');
+  console.log(chalk.hex('#FFD700')('  ★ Phase 2: Converting to structured data\n'));
   await spawnCopilotStreaming(
     buildConvertPrompt(researchDataPath, outputPath, existingContributions)
   );

@@ -25,16 +25,15 @@ function truncate(str, len) {
 
 export function showExistingSummary(contributions) {
   console.log();
-  console.log(chalk.bold.underline(`Existing contributions: ${contributions.length}`));
+  console.log(chalk.hex('#FFD700')(`  ★ ${chalk.bold(contributions.length)} existing contributions`));
   console.log();
 
   if (contributions.length === 0) {
-    console.log(chalk.dim('  No existing contributions found. New entries will use a generic format.'));
+    console.log(chalk.dim('    No existing contributions found. New entries will use a generic format.'));
     console.log();
     return;
   }
 
-  // Count by type
   const counts = {};
   for (const c of contributions) {
     const t = c.type || 'OTHER';
@@ -43,21 +42,23 @@ export function showExistingSummary(contributions) {
 
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   for (const [type, count] of sorted) {
-    console.log(`  ${colorType(type)} ${chalk.bold(count)}`);
+    const bar = chalk.hex('#FFD700')('█'.repeat(Math.min(count, 30)));
+    console.log(`    ${colorType(type)} ${bar} ${chalk.bold(count)}`);
   }
   console.log();
 }
 
 export function displayNewActivities(activities) {
-  console.log(chalk.bold.underline(`Found ${activities.length} new activities:`));
-  console.log();
+  console.log(chalk.hex('#FFD700').bold(`  New activities:\n`));
 
   for (let i = 0; i < activities.length; i++) {
     const a = activities[i];
-    const idx = chalk.dim(`${(i + 1).toString().padStart(2)}.`);
-    console.log(`  ${idx} ${colorType(a.type)} ${chalk.bold(truncate(a.title, 60))}`);
-    console.log(`      ${chalk.dim(a.date?.slice(0, 10) || 'no date')}  ${chalk.dim(truncate(a.url || 'no url', 70))}`);
-    console.log(`      ${chalk.dim(truncate(a.description, 80))}`);
+    const idx = chalk.hex('#FFD700')(`  ${(i + 1).toString().padStart(2)}.`);
+    console.log(`${idx} ${colorType(a.type)} ${chalk.bold(truncate(a.title, 55))}`);
+    console.log(`      ${chalk.dim(a.date?.slice(0, 10) || 'no date')}  ${chalk.dim.underline(truncate(a.url || '', 65))}`);
+    if (a.description) {
+      console.log(`      ${chalk.dim(truncate(a.description, 75))}`);
+    }
     console.log();
   }
 }
