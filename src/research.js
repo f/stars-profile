@@ -110,9 +110,11 @@ The detected writing style is ${language}. Write all new entries in the same lan
     ? `\nExclude any of these URLs (already recorded):\n${existingUrls.join('\n')}\n`
     : '';
 
-  return `Read the research data from the file at ${researchDataPath}.
+  return `You are a data converter. DO NOT do any web searches or research. DO NOT run curl or fetch commands. Your ONLY job is to read a text file and write a JSON file.
 
-Convert ALL the activities found into a valid JSON array and write it to ${outputPath}.
+Step 1: Read the file at ${researchDataPath}
+Step 2: Convert the activities found in that file into a JSON array
+Step 3: Write the JSON array to ${outputPath}
 
 ${styleSection}
 ${excludeSection}
@@ -123,8 +125,8 @@ Each object in the JSON array must have exactly these fields:
 - "type": one of: ${CONTRIBUTION_TYPES.join(', ')}
 - "date": ISO 8601 string (e.g. "2025-03-22T00:00:00.000Z")
 
-Write ONLY valid JSON to the output file. No explanations, no markdown — just the raw JSON array.
-Make sure the file is written successfully.`;
+DO NOT search the web. DO NOT make HTTP requests. ONLY read the input file and write valid JSON to the output file.
+Write ONLY the raw JSON array to the output file. No explanations, no markdown.`;
 }
 
 function isValidUrl(str) {
@@ -300,19 +302,25 @@ export async function researchActivities(query, existingContributions) {
   writeFileSync(researchDataPath, researchOutput);
 
   // Phase 2: Convert to structured JSON
-  await spawnCopilotStreaming(
+  const convertOutput = await spawnCopilotStreaming(
     buildConvertPrompt(researchDataPath, outputPath, existingContributions),
     '★ Converting to structured data'
   );
 
-  // Read the JSON output file
+  // Read the JSON output file, fall back to parsing stdout
   let jsonContent;
   try {
     jsonContent = readFileSync(outputPath, 'utf-8');
   } catch {
-    throw new Error(
-      `Copilot did not write the JSON output file at ${outputPath}.\nResearch data saved at: ${researchDataPath}`
-    );
+    // Copilot may have printed JSON to stdout instead of writing the file
+    const jsonMatch = convertOutput.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    } else {
+      throw new Error(
+        `Copilot did not produce JSON output.\nResearch data saved at: ${researchDataPath}`
+      );
+    }
   }
 
   // Parse JSON
